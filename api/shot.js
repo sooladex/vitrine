@@ -21,7 +21,7 @@ async function capture(url) {
   const key = process.env.MICROLINK_API_KEY;
   const q = new URLSearchParams({
     url, screenshot: 'true', meta: 'false', embed: 'screenshot.url',
-    'screenshot.type': 'jpeg', 'viewport.width': '1280', 'viewport.height': '800', waitForTimeout: '2500'
+    'screenshot.type': 'jpeg', 'viewport.width': '1280', 'viewport.height': '800', waitForTimeout: '6000'
   });
   return (await grab(`https://${key ? 'pro' : 'api'}.microlink.io/?${q}`, key ? { 'x-api-key': key } : null))
       || (await grab(`https://image.thum.io/get/width/1280/crop/800/noanimate/${url}`));
@@ -42,7 +42,8 @@ module.exports = async (req, res) => {
   try {
     await ensureSchema();
     const row = (await sql`select mime, encode(data, 'base64') as b64, fetched_at from shots where url = ${url}`)[0];
-    if (row && Date.now() - new Date(row.fetched_at).getTime() < FRESH_MS) return send(res, row.mime, Buffer.from(row.b64, 'base64'), LONG);
+    const refresh = req.query && req.query.refresh === '1' && (await currentUser(req));
+    if (row && !refresh && Date.now() - new Date(row.fetched_at).getTime() < FRESH_MS) return send(res, row.mime, Buffer.from(row.b64, 'base64'), LONG);
 
     // Seulement les sites présents sur une vitrine, ou demandés par quelqu'un de connecté (éditeur).
     const listed = (await sql`select 1 from pages where config->'products' @> ${JSON.stringify([{ url }])}::jsonb limit 1`).length > 0;

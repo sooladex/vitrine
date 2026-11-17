@@ -84,9 +84,10 @@ function cleanConfig(c) {
     c1: HEX.test(c.c1) ? c.c1 : '#7c5cff', c2: HEX.test(c.c2) ? c.c2 : '#00d4ff',
     intro: c.intro !== false,
     socials: (Array.isArray(c.socials) ? c.socials : []).slice(0, 6).map(x => ({ label: s(x && x.label, 24), url: cleanUrl(x && x.url) })).filter(x => x.label && x.url),
-    products: (Array.isArray(c.products) ? c.products : []).slice(0, 30).map(x => ({
+    products: (Array.isArray(c.products) ? c.products : []).slice(0, 40).map(x => ({
       title: s(x && x.title, 60), url: cleanUrl(x && x.url), desc: s(x && x.desc, 160),
-      cat: s(x && x.cat, 30), status: STATUSES.includes(x && x.status) ? x.status : 'live', feat: !!(x && x.feat)
+      cat: s(x && x.cat, 30), status: STATUSES.includes(x && x.status) ? x.status : 'live', feat: !!(x && x.feat),
+      v: Number.isFinite(+(x && x.v)) ? Math.max(0, Math.floor(+x.v)) : 0
     }))
   };
 }

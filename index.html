@@ -144,7 +144,8 @@ section.blk{margin-top:clamp(64px,9vw,108px)}
 .rec{width:9px;height:9px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 12px #ff4d4d;animation:pulse 1.2s infinite;flex:none}
 
 /* liens */
-.groups{display:grid;grid-template-columns:1fr 1fr;gap:34px 22px}
+.groups{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:34px 22px}
+.groups>div{min-width:0}
 @media(max-width:899px){.groups{grid-template-columns:1fr}}
 .gt{font:800 21px var(--fd);letter-spacing:-.035em;display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .gt span{font:600 11px var(--fm);padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--mute)}
@@ -432,7 +433,7 @@ function siteUrl(u){
     if(/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.|\[)/i.test(p.hostname)||!p.hostname.includes('.')) return ''; return p.href; }catch(e){ return ''; }
 }
 const hostOf = u => { try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } };
-const shotSrc = u => '/api/shot?u=' + encodeURIComponent(u);
+const shotSrc = (u,v) => '/api/shot?u=' + encodeURIComponent(u) + (v ? '&v=' + v : '');
 function hue(s){ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))%360; return h; }
 const pv = p => { const h=hue(hostOf(p.url)||p.title||'x'); return `--p1:hsl(${h} 85% 58%);--p2:hsl(${(h+40)%360} 80% 38%)`; };
 const pname = p => p.title || hostOf(p.url) || 'Sans nom';
@@ -444,7 +445,7 @@ document.querySelectorAll('.hostPre,#claimPre').forEach(e=>e.textContent=HOST+'/
 /* Une capture : cadre coloré + nom, remplacé par la vraie image quand elle arrive */
 function shot(p, extra=''){
   const u=siteUrl(p.url);
-  return `<div class="shot${u?' loading':''} ${extra}" style="${pv(p)}"><span class="ph">${esc(initials(pname(p)))}</span>${u?`<img data-shot src="${esc(shotSrc(u))}" alt="Aperçu de ${esc(pname(p))}" loading="lazy" decoding="async">`:''}</div>`;
+  return `<div class="shot${u?' loading':''} ${extra}" style="${pv(p)}"><span class="ph">${esc(initials(pname(p)))}</span>${u?`<img data-shot src="${esc(shotSrc(u,p.v))}" alt="Aperçu de ${esc(pname(p))}" loading="lazy" decoding="async">`:''}</div>`;
 }
 document.addEventListener('load', e=>{ const i=e.target; if(i.tagName!=='IMG'||!i.hasAttribute('data-shot')) return;
   i.classList.add('ok'); const b=i.parentNode; b && b.classList.remove('loading');
@@ -459,7 +460,7 @@ function sanitize(c){
   return { name:String(c.name||'').slice(0,40), bio:String(c.bio||'').slice(0,180),
     c1:HEXR.test(c.c1)?c.c1:d.c1, c2:HEXR.test(c.c2)?c.c2:d.c2, intro:c.intro!==false,
     socials:(Array.isArray(c.socials)?c.socials:[]).slice(0,6).map(x=>({label:String(x&&x.label||'').slice(0,24),url:String(x&&x.url||'').slice(0,500)})),
-    products:(Array.isArray(c.products)?c.products:[]).slice(0,30).map(x=>({title:String(x&&x.title||'').slice(0,60),url:String(x&&x.url||'').slice(0,500),desc:String(x&&x.desc||'').slice(0,160),cat:String(x&&x.cat||'').slice(0,30),status:STATUS[x&&x.status]?x.status:'live',feat:!!(x&&x.feat)})) };
+    products:(Array.isArray(c.products)?c.products:[]).slice(0,40).map(x=>({title:String(x&&x.title||'').slice(0,60),url:String(x&&x.url||'').slice(0,500),desc:String(x&&x.desc||'').slice(0,160),cat:String(x&&x.cat||'').slice(0,30),status:STATUS[x&&x.status]?x.status:'live',feat:!!(x&&x.feat),v:+(x&&x.v)||0})) };
 }
 let S=DEF(), SLUG=null, MODE='home', USER=null, filter='all', query='';
 
@@ -699,14 +700,14 @@ async function flush(){
 }
 addEventListener('beforeunload',e=>{ if(MODE==='edit' && (saving||/Modifié/.test($('status').textContent))){ flush(); e.preventDefault(); e.returnValue=''; } });
 function prodRows(){
-  $('pCount').textContent=`${S.products.length}/30`;
+  $('pCount').textContent=`${S.products.length}/40`;
   $('prods').innerHTML=S.products.map((p,i)=>`<div class="prow">
     <div class="top">${shot(p)}<div class="f" style="flex:1"><input class="inp" data-p="${i}" data-k="url" value="${esc(p.url)}" placeholder="https://monsite.com" aria-label="Adresse du site ${i+1}"></div></div>
     <div class="two"><input class="inp" data-p="${i}" data-k="title" value="${esc(p.title)}" placeholder="Nom" maxlength="60" aria-label="Nom"><input class="inp" data-p="${i}" data-k="cat" value="${esc(p.cat)}" placeholder="Catégorie (ex. SaaS)" maxlength="30" list="catList" aria-label="Catégorie"></div>
     <input class="inp" data-p="${i}" data-k="desc" value="${esc(p.desc)}" placeholder="Une phrase pour le présenter" maxlength="160" aria-label="Description">
     <div class="bar"><select class="inp" data-p="${i}" data-k="status" style="width:auto" aria-label="Statut">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}"${p.status===k?' selected':''}>${v}</option>`).join('')}</select>
       <label><input type="checkbox" data-p="${i}" data-k="feat"${p.feat?' checked':''}> À la une</label>
-      <button class="ib" data-up="${i}" aria-label="Monter"${i?'':' disabled'}>↑</button><button class="ib" data-del="${i}" aria-label="Supprimer">✕</button></div></div>`).join('')
+      <button class="ib" data-reshot="${i}" aria-label="Refaire la capture" title="Refaire la capture">↻</button><button class="ib" data-up="${i}" aria-label="Monter"${i?'':' disabled'}>↑</button><button class="ib" data-del="${i}" aria-label="Supprimer">✕</button></div></div>`).join('')
     +`<datalist id="catList">${cats(S.products).map(c=>`<option value="${esc(c)}">`).join('')}</datalist>`
     || '<p class="hint">Aucun site pour l’instant.</p>';
 }
@@ -728,11 +729,17 @@ function bindEditor(){
       S.products[i].url=u||raw; if(u && !S.products[i].title) S.products[i].title=hostOf(u).split('.')[0].replace(/^./,m=>m.toUpperCase());
       prodRows(); render(); save(); }
     if(k==='feat'||k==='status'||k==='cat'){ render(); prodRows(); } });
-  $('prods').addEventListener('click',e=>{ const up=e.target.closest('[data-up]'), del=e.target.closest('[data-del]');
+  $('prods').addEventListener('click',async e=>{ const rs=e.target.closest('[data-reshot]');
+    if(rs){ const p=S.products[+rs.dataset.reshot], u=siteUrl(p&&p.url); if(!u){ toast('Ajoute d’abord une adresse'); return; }
+      rs.disabled=true; toast('Nouvelle capture en cours…');
+      const r=await fetch(shotSrc(u)+'&refresh=1&t='+Date.now(),{credentials:'same-origin'}).catch(()=>null);
+      rs.disabled=false; if(!r||!r.ok){ toast('La capture a échoué, réessaie plus tard'); return; }
+      p.v=(p.v||0)+1; prodRows(); render(); save(); toast('Capture mise à jour'); return; }
+    const up=e.target.closest('[data-up]'), del=e.target.closest('[data-del]');
     if(up){ const i=+up.dataset.up; [S.products[i-1],S.products[i]]=[S.products[i],S.products[i-1]]; }
     else if(del){ S.products.splice(+del.dataset.del,1); } else return; prodRows(); render(); save(); });
-  $('addP').onclick=()=>{ if(S.products.length>=30){ toast('30 sites maximum'); return; }
-    S.products.push({title:'',url:'',desc:'',cat:'',status:'live',feat:false}); prodRows(); render(); save();
+  $('addP').onclick=()=>{ if(S.products.length>=40){ toast('40 sites maximum'); return; }
+    S.products.push({title:'',url:'',desc:'',cat:'',status:'live',feat:false,v:0}); prodRows(); render(); save();
     const ins=$('prods').querySelectorAll('[data-k="url"]'); ins[ins.length-1].focus(); };
   $('socs').addEventListener('input',e=>{ const i=+e.target.dataset.s, k=e.target.dataset.k; if(isNaN(i)||!k) return; S.socials[i][k]=e.target.value; render(); save(); });
   $('socs').addEventListener('click',e=>{ const d=e.target.closest('[data-sdel]'); if(!d) return; S.socials.splice(+d.dataset.sdel,1); socRows(); render(); save(); });
