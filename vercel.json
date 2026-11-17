@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/page.js": { "includeFiles": "index.html" },
+    "api/shot.js": { "maxDuration": 30 }
+  },
+  "rewrites": [
+    { "source": "/edit", "destination": "/index.html" },
+    { "source": "/:slug([^/.]+)", "destination": "/api/page?slug=:slug" }
+  ],
+  "headers": [
+    { "source": "/(edit|index.html)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
+  ]
+}
